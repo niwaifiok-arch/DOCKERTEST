@@ -8,4 +8,4 @@ COPY dist/hello_world /opt/hello_world/
 
 EXPOSE 80
 
-CMD [ "./hello_world" ]
+CMD [ "./hello_world", "python"]

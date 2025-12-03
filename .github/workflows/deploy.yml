@@ -1,4 +1,4 @@
-name: Deploy
+﻿name: Deploy
 
 on:
   push:
@@ -7,49 +7,33 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies and build binary
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install --no-cache-dir -r requirements.txt
-          pip install pyinstaller
-
-      - name: Build Docker image
-        run: |
-          source venv/bin/activate
-          pyinstaller -F hello_world.py
-          IMAGE_NAME="cicd-101-workshop"
-          TAG="0.1.${{ github.run_number }}"
-          if [ -z "$DOCKER_LOGIN" ]; then
-            FULL_IMAGE="${IMAGE_NAME}:${TAG}"
-          else
-            FULL_IMAGE="${DOCKER_LOGIN}/${IMAGE_NAME}:${TAG}"
-          fi
-          echo "Building Docker image: $FULL_IMAGE"
-          docker build -t $FULL_IMAGE .
-
-      - name: Log in to Docker Hub
-        run: echo ${{ secrets.DOCKER_PWD }} | docker login -u $DOCKER_LOGIN --password-stdin
-
-      - name: Push Docker image
-        run: |
-          IMAGE_NAME="cicd-101-workshop"
-          TAG="0.1.${{ github.run_number }}"
-          if [ -z "$DOCKER_LOGIN" ]; then
-            FULL_IMAGE="${IMAGE_NAME}:${TAG}"
-          else
-            FULL_IMAGE="${DOCKER_LOGIN}/${IMAGE_NAME}:${TAG}"
-          fi
-          echo "Pushing Docker image: $FULL_IMAGE"
-          docker push $FULL_IMAGE
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Build application binary with PyInstaller
+      run: |
+        mkdir -p dist
+        pyinstaller --onefile hello_world.py
+    
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_LOGIN }}
+        password: ${{ secrets.DOCKER_PWD }}
+    
+    - name: Build Docker image
+      run: docker build -t ${{ secrets.DOCKER_LOGIN }}/hello-world-flask:latest .
+    
+    - name: Push Docker image to Docker Hub
+      run: docker push ${{ secrets.DOCKER_LOGIN }}/hello-world-flask:latest
